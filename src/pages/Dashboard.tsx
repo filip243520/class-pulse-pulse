@@ -18,6 +18,7 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [studentCount, setStudentCount] = useState(0);
   const [classCount, setClassCount] = useState(0);
+  const [attendanceRate, setAttendanceRate] = useState(0);
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -49,8 +50,20 @@ const Dashboard = () => {
         .from("classes")
         .select("*", { count: "exact", head: true });
 
+      // Get today's attendance rate
+      const today = new Date().toISOString().split("T")[0];
+      const { data: todayRecords } = await supabase
+        .from("attendance_records")
+        .select("status")
+        .gte("timestamp", `${today}T00:00:00`)
+        .lte("timestamp", `${today}T23:59:59`);
+
+      const presentToday = todayRecords?.filter((r) => r.status === "present").length || 0;
+      const attendanceRate = students ? (presentToday / students) * 100 : 0;
+
       setStudentCount(students || 0);
       setClassCount(classes || 0);
+      setAttendanceRate(attendanceRate);
     };
 
     if (user) {
@@ -127,7 +140,7 @@ const Dashboard = () => {
               <CheckCircle2 className="w-4 h-4 text-success" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-success">0%</div>
+              <div className="text-2xl font-bold text-success">{attendanceRate.toFixed(1)}%</div>
               <p className="text-xs text-muted-foreground mt-1">Genomsnittlig närvaro</p>
             </CardContent>
           </Card>
