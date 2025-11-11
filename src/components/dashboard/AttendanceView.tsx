@@ -2,9 +2,11 @@ import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
-import { ScanLine, TrendingUp, Users, CheckCircle2, XCircle } from "lucide-react";
+import { ScanLine, TrendingUp, Users, CheckCircle2, XCircle, Download } from "lucide-react";
 import { toast } from "sonner";
 import { Progress } from "@/components/ui/progress";
+import { format } from "date-fns";
+import { sv } from "date-fns/locale";
 
 interface AttendanceStats {
   totalStudents: number;
@@ -156,6 +158,59 @@ const AttendanceView = () => {
     }
   };
 
+  const exportToCSV = async () => {
+    try {
+      const { data: records, error } = await supabase
+        .from("attendance_records")
+        .select(`
+          timestamp,
+          status,
+          notes,
+          students (
+            first_name,
+            last_name,
+            student_number
+          ),
+          lessons (
+            classes (
+              name
+            )
+          )
+        `)
+        .order("timestamp", { ascending: false });
+
+      if (error) throw error;
+
+      const csv = [
+        ["Datum", "Tid", "Elev", "Elevnummer", "Klass", "Status", "Noteringar"].join(","),
+        ...(records || []).map((record: any) => [
+          format(new Date(record.timestamp), "yyyy-MM-dd", { locale: sv }),
+          format(new Date(record.timestamp), "HH:mm", { locale: sv }),
+          `${record.students.first_name} ${record.students.last_name}`,
+          record.students.student_number,
+          record.lessons?.classes?.name || "N/A",
+          record.status === "present" ? "Närvarande" : "Frånvarande",
+          record.notes || "",
+        ].join(",")),
+      ].join("\n");
+
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      const link = document.createElement("a");
+      const url = URL.createObjectURL(blob);
+      link.setAttribute("href", url);
+      link.setAttribute("download", `narvaro_rapport_${format(new Date(), "yyyy-MM-dd")}.csv`);
+      link.style.visibility = "hidden";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      toast.success("Rapport exporterad");
+    } catch (error) {
+      console.error("Error exporting:", error);
+      toast.error("Kunde inte exportera rapport");
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Statistics Cards */}
@@ -238,11 +293,19 @@ const AttendanceView = () => {
         </CardContent>
       </Card>
 
-      {/* Weekly Trend */}
+      {/* Weekly Trend & Export */}
       <Card>
         <CardHeader>
-          <CardTitle>Veckotrend</CardTitle>
-          <CardDescription>Närvarostatistik senaste 7 dagarna</CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>Veckotrend</CardTitle>
+              <CardDescription>Närvarostatistik senaste 7 dagarna</CardDescription>
+            </div>
+            <Button onClick={exportToCSV} variant="outline">
+              <Download className="w-4 h-4 mr-2" />
+              Exportera Rapport
+            </Button>
+          </div>
         </CardHeader>
         <CardContent className="space-y-4">
           <div>

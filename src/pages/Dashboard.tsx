@@ -5,11 +5,13 @@ import { Session, User } from "@supabase/supabase-js";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { GraduationCap, LogOut, Users, BookOpen, Calendar, CheckCircle2, Settings } from "lucide-react";
+import { GraduationCap, LogOut, Users, BookOpen, Calendar, CheckCircle2, Settings, Bell, CalendarDays } from "lucide-react";
 import { toast } from "sonner";
 import StudentsView from "@/components/dashboard/StudentsView";
 import ClassesView from "@/components/dashboard/ClassesView";
 import AttendanceView from "@/components/dashboard/AttendanceView";
+import WeeklyScheduleView from "@/components/dashboard/WeeklyScheduleView";
+import NotificationsView from "@/components/dashboard/NotificationsView";
 import logo from "@/assets/logo.png";
 
 const Dashboard = () => {
@@ -200,32 +202,48 @@ const Dashboard = () => {
           </Card>
         </div>
 
-        <Tabs defaultValue="students" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="students">
-              <Users className="w-4 h-4 mr-2" />
-              Elever
+        <Tabs defaultValue="attendance" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-5">
+            <TabsTrigger value="attendance">
+              <Calendar className="w-4 h-4 mr-2" />
+              Närvaro
+            </TabsTrigger>
+            <TabsTrigger value="schedule">
+              <CalendarDays className="w-4 h-4 mr-2" />
+              Schema
             </TabsTrigger>
             <TabsTrigger value="classes">
               <BookOpen className="w-4 h-4 mr-2" />
               Klasser
             </TabsTrigger>
-            <TabsTrigger value="attendance">
-              <Calendar className="w-4 h-4 mr-2" />
-              Närvaro
+            <TabsTrigger value="students">
+              <Users className="w-4 h-4 mr-2" />
+              Elever
+            </TabsTrigger>
+            <TabsTrigger value="notifications">
+              <Bell className="w-4 h-4 mr-2" />
+              Notiser
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="students">
-            <StudentsView />
+          <TabsContent value="attendance">
+            <AttendanceView />
+          </TabsContent>
+
+          <TabsContent value="schedule">
+            <WeeklyScheduleView />
           </TabsContent>
 
           <TabsContent value="classes">
             <ClassesView />
           </TabsContent>
 
-          <TabsContent value="attendance">
-            <AttendanceView />
+          <TabsContent value="students">
+            <StudentsView />
+          </TabsContent>
+
+          <TabsContent value="notifications">
+            <NotificationsView />
           </TabsContent>
         </Tabs>
       </main>

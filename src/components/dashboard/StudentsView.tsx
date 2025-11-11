@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Trash2, Edit } from "lucide-react";
+import { Plus, Trash2, Eye } from "lucide-react";
+import StudentProfileView from "./StudentProfileView";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -26,6 +27,7 @@ const StudentsView = () => {
   const [lastName, setLastName] = useState("");
   const [studentNumber, setStudentNumber] = useState("");
   const [cardReaderId, setCardReaderId] = useState("");
+  const [selectedStudent, setSelectedStudent] = useState<string | null>(null);
 
   useEffect(() => {
     fetchStudents();
@@ -94,6 +96,15 @@ const StudentsView = () => {
       toast.error("Kunde inte ta bort elev");
     }
   };
+
+  if (selectedStudent) {
+    return (
+      <StudentProfileView
+        studentId={selectedStudent}
+        onBack={() => setSelectedStudent(null)}
+      />
+    );
+  }
 
   if (loading) {
     return (
@@ -208,13 +219,22 @@ const StudentsView = () => {
                     )}
                   </TableCell>
                   <TableCell className="text-right">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleDeleteStudent(student.id)}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
+                    <div className="flex gap-2 justify-end">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setSelectedStudent(student.id)}
+                      >
+                        <Eye className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleDeleteStudent(student.id)}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
