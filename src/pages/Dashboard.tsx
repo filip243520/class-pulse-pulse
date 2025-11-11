@@ -12,6 +12,7 @@ import ClassesView from "@/components/dashboard/ClassesView";
 import AttendanceView from "@/components/dashboard/AttendanceView";
 import WeeklyScheduleView from "@/components/dashboard/WeeklyScheduleView";
 import NotificationsView from "@/components/dashboard/NotificationsView";
+import ScheduleEditView from "@/components/dashboard/ScheduleEditView";
 import logo from "@/assets/logo.png";
 
 const Dashboard = () => {
@@ -48,32 +49,46 @@ const Dashboard = () => {
 
   useEffect(() => {
     const fetchStats = async () => {
-      // Fetch teacher info
-      const { data: teacher } = await supabase
-        .from("teachers")
-        .select(`
-          first_name,
-          last_name,
-          school_id,
-          id,
-          schools (name)
-        `)
-        .single();
-
-      if (teacher) {
-        setTeacherName(`${teacher.first_name} ${teacher.last_name}`);
-        setSchoolName((teacher.schools as any)?.name || "Ingen skola vald");
-
-        // Fetch teacher's classes
-        const { data: teacherClassData } = await supabase
-          .from("teacher_classes")
+      try {
+        // Fetch teacher info
+        const { data: teacher, error: teacherError } = await supabase
+          .from("teachers")
           .select(`
-            classes (name)
+            first_name,
+            last_name,
+            school_id,
+            id,
+            schools (name)
           `)
-          .eq("teacher_id", teacher.id);
+          .single();
 
-        const classNames = teacherClassData?.map((tc: any) => tc.classes?.name).filter(Boolean) || [];
-        setTeacherClasses(classNames);
+        if (teacherError) {
+          console.error("Error fetching teacher:", teacherError);
+          toast.error("Kunde inte hämta läraruppgifter");
+          return;
+        }
+
+        if (teacher) {
+          setTeacherName(`${teacher.first_name} ${teacher.last_name}`);
+          setSchoolName((teacher.schools as any)?.name || "Ingen skola vald");
+
+          // Fetch teacher's classes
+          const { data: teacherClassData, error: classError } = await supabase
+            .from("teacher_classes")
+            .select(`
+              classes (name)
+            `)
+            .eq("teacher_id", teacher.id);
+
+          if (classError) {
+            console.error("Error fetching teacher classes:", classError);
+          }
+
+          const classNames = teacherClassData?.map((tc: any) => tc.classes?.name).filter(Boolean) || [];
+          setTeacherClasses(classNames);
+        }
+      } catch (error) {
+        console.error("Error in fetchStats:", error);
       }
 
       const { count: students } = await supabase
@@ -203,7 +218,7 @@ const Dashboard = () => {
         </div>
 
         <Tabs defaultValue="attendance" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-6">
             <TabsTrigger value="attendance">
               <Calendar className="w-4 h-4 mr-2" />
               Närvaro
@@ -211,6 +226,10 @@ const Dashboard = () => {
             <TabsTrigger value="schedule">
               <CalendarDays className="w-4 h-4 mr-2" />
               Schema
+            </TabsTrigger>
+            <TabsTrigger value="edit-schedule">
+              <CalendarDays className="w-4 h-4 mr-2" />
+              Redigera Schema
             </TabsTrigger>
             <TabsTrigger value="classes">
               <BookOpen className="w-4 h-4 mr-2" />
@@ -232,6 +251,10 @@ const Dashboard = () => {
 
           <TabsContent value="schedule">
             <WeeklyScheduleView />
+          </TabsContent>
+
+          <TabsContent value="edit-schedule">
+            <ScheduleEditView />
           </TabsContent>
 
           <TabsContent value="classes">

@@ -31,29 +31,41 @@ const Settings = () => {
   const fetchData = async () => {
     try {
       // Fetch all schools
-      const { data: schoolsData } = await supabase
+      const { data: schoolsData, error: schoolsError } = await supabase
         .from("schools")
         .select("*")
         .order("name");
 
+      if (schoolsError) {
+        console.error("Error fetching schools:", schoolsError);
+        toast.error("Kunde inte hämta skolor");
+      }
+
       if (schoolsData) {
+        console.log("Fetched schools:", schoolsData);
         setSchools(schoolsData);
       }
 
       // Fetch current teacher info
-      const { data: teacher } = await supabase
+      const { data: teacher, error: teacherError } = await supabase
         .from("teachers")
         .select("id, school_id, skola24_schedule_url")
         .single();
 
+      if (teacherError) {
+        console.error("Error fetching teacher:", teacherError);
+        toast.error("Kunde inte hämta läraruppgifter");
+      }
+
       if (teacher) {
+        console.log("Fetched teacher:", teacher);
         setTeacherId(teacher.id);
         setSelectedSchoolId(teacher.school_id || "");
         setSkola24Url(teacher.skola24_schedule_url || "");
       }
     } catch (error: any) {
+      console.error("Error in fetchData:", error);
       toast.error("Kunde inte ladda inställningar");
-      console.error(error);
     } finally {
       setLoading(false);
     }
