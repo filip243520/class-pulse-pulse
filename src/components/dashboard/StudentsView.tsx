@@ -6,6 +6,7 @@ import StudentProfileView from "./StudentProfileView";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
@@ -17,27 +18,61 @@ interface Student {
   last_name: string;
   student_number: string;
   card_reader_id: string | null;
+  student_classes?: Array<{
+    classes: {
+      name: string;
+    };
+  }>;
+}
+
+interface Class {
+  id: string;
+  name: string;
 }
 
 const StudentsView = () => {
   const [open, setOpen] = useState(false);
   const [students, setStudents] = useState<Student[]>([]);
+  const [classes, setClasses] = useState<Class[]>([]);
   const [loading, setLoading] = useState(true);
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [studentNumber, setStudentNumber] = useState("");
   const [cardReaderId, setCardReaderId] = useState("");
+  const [selectedClassId, setSelectedClassId] = useState("");
   const [selectedStudent, setSelectedStudent] = useState<string | null>(null);
 
   useEffect(() => {
     fetchStudents();
+    fetchClasses();
   }, []);
+
+  const fetchClasses = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("classes")
+        .select("*")
+        .order("name", { ascending: true });
+
+      if (error) throw error;
+      setClasses(data || []);
+    } catch (error: any) {
+      console.error(error);
+    }
+  };
 
   const fetchStudents = async () => {
     try {
       const { data, error } = await supabase
         .from("students")
-        .select("*")
+        .select(`
+          *,
+          student_classes (
+            classes (
+              name
+            )
+          )
+        `)
         .order("last_name", { ascending: true });
 
       if (error) throw error;
@@ -53,6 +88,11 @@ const StudentsView = () => {
   const handleAddStudent = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    if (!selectedClassId) {
+      toast.error("Du måste välja en klass");
+      return;
+    }
+
     try {
       const { data: teacher } = await supabase
         .from("teachers")
@@ -64,15 +104,29 @@ const StudentsView = () => {
         return;
       }
 
-      const { error } = await supabase.from("students").insert({
-        school_id: teacher.school_id,
-        first_name: firstName,
-        last_name: lastName,
-        student_number: studentNumber,
-        card_reader_id: cardReaderId || null,
-      });
+      const { data: student, error: studentError } = await supabase
+        .from("students")
+        .insert({
+          school_id: teacher.school_id,
+          first_name: firstName,
+          last_name: lastName,
+          student_number: studentNumber,
+          card_reader_id: cardReaderId || null,
+        })
+        .select()
+        .single();
 
-      if (error) throw error;
+      if (studentError) throw studentError;
+
+      // Link student to class
+      const { error: linkError } = await supabase
+        .from("student_classes")
+        .insert({
+          student_id: student.id,
+          class_id: selectedClassId,
+        });
+
+      if (linkError) throw linkError;
 
       toast.success("Elev tillagd");
       setOpen(false);
@@ -80,6 +134,7 @@ const StudentsView = () => {
       setLastName("");
       setStudentNumber("");
       setCardReaderId("");
+      setSelectedClassId("");
       fetchStudents();
     } catch (error: any) {
       toast.error(error.message || "Kunde inte lägga till elev");
@@ -181,6 +236,21 @@ const StudentsView = () => {
                     onChange={(e) => setCardReaderId(e.target.value)}
                   />
                 </div>
+                <div className="space-y-2">
+                  <Label htmlFor="class">Klass *</Label>
+                  <Select value={selectedClassId} onValueChange={setSelectedClassId} required>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Välj klass" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {classes.map((cls) => (
+                        <SelectItem key={cls.id} value={cls.id}>
+                          {cls.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
                 <Button type="submit" className="w-full">
                   Lägg till
                 </Button>
@@ -200,6 +270,7 @@ const StudentsView = () => {
               <TableRow>
                 <TableHead>Namn</TableHead>
                 <TableHead>Elevnummer</TableHead>
+                <TableHead>Klass</TableHead>
                 <TableHead>Kort ID</TableHead>
                 <TableHead className="text-right">Åtgärder</TableHead>
               </TableRow>
@@ -211,6 +282,19 @@ const StudentsView = () => {
                     {student.first_name} {student.last_name}
                   </TableCell>
                   <TableCell>{student.student_number}</TableCell>
+                  <TableCell>
+                    {student.student_classes && student.student_classes.length > 0 ? (
+                      <div className="flex flex-wrap gap-1">
+                        {student.student_classes.map((sc: any, idx: number) => (
+                          <Badge key={idx} variant="secondary">
+                            {sc.classes?.name}
+                          </Badge>
+                        ))}
+                      </div>
+                    ) : (
+                      <span className="text-muted-foreground text-sm">Ingen klass</span>
+                    )}
+                  </TableCell>
                   <TableCell>
                     {student.card_reader_id ? (
                       <Badge variant="outline">{student.card_reader_id}</Badge>
