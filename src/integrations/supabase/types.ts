@@ -230,6 +230,42 @@ export type Database = {
           },
         ]
       }
+      teacher_classes: {
+        Row: {
+          class_id: string
+          created_at: string
+          id: string
+          teacher_id: string
+        }
+        Insert: {
+          class_id: string
+          created_at?: string
+          id?: string
+          teacher_id: string
+        }
+        Update: {
+          class_id?: string
+          created_at?: string
+          id?: string
+          teacher_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "teacher_classes_class_id_fkey"
+            columns: ["class_id"]
+            isOneToOne: false
+            referencedRelation: "classes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "teacher_classes_teacher_id_fkey"
+            columns: ["teacher_id"]
+            isOneToOne: false
+            referencedRelation: "teachers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       teachers: {
         Row: {
           created_at: string
@@ -238,6 +274,7 @@ export type Database = {
           id: string
           last_name: string
           school_id: string
+          skola24_schedule_url: string | null
           user_id: string
         }
         Insert: {
@@ -247,6 +284,7 @@ export type Database = {
           id?: string
           last_name: string
           school_id: string
+          skola24_schedule_url?: string | null
           user_id: string
         }
         Update: {
@@ -256,6 +294,7 @@ export type Database = {
           id?: string
           last_name?: string
           school_id?: string
+          skola24_schedule_url?: string | null
           user_id?: string
         }
         Relationships: [

@@ -5,11 +5,12 @@ import { Session, User } from "@supabase/supabase-js";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { GraduationCap, LogOut, Users, BookOpen, Calendar, CheckCircle2 } from "lucide-react";
+import { GraduationCap, LogOut, Users, BookOpen, Calendar, CheckCircle2, Settings } from "lucide-react";
 import { toast } from "sonner";
 import StudentsView from "@/components/dashboard/StudentsView";
 import ClassesView from "@/components/dashboard/ClassesView";
 import AttendanceView from "@/components/dashboard/AttendanceView";
+import logo from "@/assets/logo.png";
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -19,6 +20,9 @@ const Dashboard = () => {
   const [studentCount, setStudentCount] = useState(0);
   const [classCount, setClassCount] = useState(0);
   const [attendanceRate, setAttendanceRate] = useState(0);
+  const [teacherName, setTeacherName] = useState("");
+  const [schoolName, setSchoolName] = useState("");
+  const [teacherClasses, setTeacherClasses] = useState<string[]>([]);
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -42,6 +46,34 @@ const Dashboard = () => {
 
   useEffect(() => {
     const fetchStats = async () => {
+      // Fetch teacher info
+      const { data: teacher } = await supabase
+        .from("teachers")
+        .select(`
+          first_name,
+          last_name,
+          school_id,
+          id,
+          schools (name)
+        `)
+        .single();
+
+      if (teacher) {
+        setTeacherName(`${teacher.first_name} ${teacher.last_name}`);
+        setSchoolName((teacher.schools as any)?.name || "Ingen skola vald");
+
+        // Fetch teacher's classes
+        const { data: teacherClassData } = await supabase
+          .from("teacher_classes")
+          .select(`
+            classes (name)
+          `)
+          .eq("teacher_id", teacher.id);
+
+        const classNames = teacherClassData?.map((tc: any) => tc.classes?.name).filter(Boolean) || [];
+        setTeacherClasses(classNames);
+      }
+
       const { count: students } = await supabase
         .from("students")
         .select("*", { count: "exact", head: true });
@@ -93,20 +125,42 @@ const Dashboard = () => {
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b border-border bg-card">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center">
-              <GraduationCap className="w-6 h-6 text-primary-foreground" />
+        <div className="container mx-auto px-4 py-4">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <img src={logo} alt="PresencePoint" className="w-10 h-10 rounded-full object-cover" />
+              <div>
+                <h1 className="text-2xl font-bold text-foreground">PresencePoint</h1>
+                <p className="text-sm text-muted-foreground">Skolnärvaro Dashboard</p>
+              </div>
             </div>
-            <div>
-              <h1 className="text-2xl font-bold text-foreground">Närvaro System</h1>
-              <p className="text-sm text-muted-foreground">Skolnärvaro Dashboard</p>
+            <div className="flex items-center gap-2">
+              <Button onClick={() => navigate("/settings")} variant="outline" size="sm">
+                <Settings className="w-4 h-4 mr-2" />
+                Inställningar
+              </Button>
+              <Button onClick={handleSignOut} variant="outline" size="sm">
+                <LogOut className="w-4 h-4 mr-2" />
+                Logga ut
+              </Button>
             </div>
           </div>
-          <Button onClick={handleSignOut} variant="outline" size="sm">
-            <LogOut className="w-4 h-4 mr-2" />
-            Logga ut
-          </Button>
+          <div className="flex items-center gap-6 text-sm">
+            <div className="flex items-center gap-2">
+              <span className="text-muted-foreground">Lärare:</span>
+              <span className="font-medium text-foreground">{teacherName}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-muted-foreground">Skola:</span>
+              <span className="font-medium text-foreground">{schoolName}</span>
+            </div>
+            {teacherClasses.length > 0 && (
+              <div className="flex items-center gap-2">
+                <span className="text-muted-foreground">Klasser:</span>
+                <span className="font-medium text-foreground">{teacherClasses.join(", ")}</span>
+              </div>
+            )}
+          </div>
         </div>
       </header>
 
